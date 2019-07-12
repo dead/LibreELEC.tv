@@ -1,25 +1,73 @@
-# SPDX-License-Identifier: GPL-2.0
-# Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
+################################################################################
+#      This file is part of LibreELEC - https://libreelec.tv
+#      Copyright (C) 2016-present Team LibreELEC
+#
+#  LibreELEC is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  LibreELEC is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
+################################################################################
 
 PKG_NAME="moonlight"
-PKG_VERSION="1.0"
-PKG_REV="110"
+PKG_VERSION="29f4511"
+PKG_SHA256="7bb7ed08345fde16a8aefb35ed6fca898ff83f0f45d1c2850b17ee7f1a7e84fc"
+PKG_VERSION_NUMBER="2.4.10"
+PKG_REV="241"
 PKG_ARCH="any"
 PKG_LICENSE="GPLv2"
-PKG_SITE=""
-PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain"
+PKG_SITE="https://github.com/dead/script.moonlight"
+PKG_URL="https://github.com/dead/script.moonlight/archive/$PKG_VERSION.tar.gz"
+PKG_SOURCE_DIR="script.moonlight-$PKG_VERSION*"
+PKG_DEPENDS_TARGET="toolchain moonlight-embedded"
 PKG_SECTION="script"
-PKG_SHORTDESC="Moonlight: Add-on removed"
-PKG_LONGDESC="Moonlight Add-on removed"
+PKG_SHORTDESC="Moonlight: implementation of NVIDIA's GameStream protocol"
+PKG_LONGDESC="Moonlight ($PKG_VERSION_NUMBER): allows you to stream your collection of games from your PC (with NVIDIA Gamestream) to your device and play them remotely"
 PKG_TOOLCHAIN="manual"
-
-PKG_ADDON_BROKEN="Moonlight is no longer maintained."
 
 PKG_IS_ADDON="yes"
 PKG_ADDON_NAME="Moonlight"
-PKG_ADDON_TYPE="xbmc.broken"
+PKG_ADDON_TYPE="xbmc.service.pluginsource"
+PKG_ADDON_PROVIDES="executable"
+
+post_unpack() {
+  # don't use the files from the script
+  rm $PKG_BUILD/script.moonlight/icon.png
+}
 
 addon() {
-  :
+  mkdir -p $ADDON_BUILD/$PKG_ADDON_ID
+  cp -PR $PKG_BUILD/script.moonlight/* $ADDON_BUILD/$PKG_ADDON_ID
+
+  # use our own changelog.txt
+  cp $PKG_DIR/changelog.txt $ADDON_BUILD/$PKG_ADDON_ID
+
+  # let's use our addon.xml instead
+  rm $ADDON_BUILD/$PKG_ADDON_ID/addon.xml
+
+  mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/bin
+  cp -P $(get_build_dir moonlight-embedded)/.$TARGET_NAME/moonlight $ADDON_BUILD/$PKG_ADDON_ID/bin
+
+  mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/lib
+  cp $(get_build_dir moonlight-embedded)/.$TARGET_NAME/libgamestream/libgamestream.so.$PKG_VERSION_NUMBER $ADDON_BUILD/$PKG_ADDON_ID/lib
+  cp $(get_build_dir moonlight-embedded)/.$TARGET_NAME/libgamestream/libmoonlight-common.so.$PKG_VERSION_NUMBER $ADDON_BUILD/$PKG_ADDON_ID/lib
+
+  if [ "$KODIPLAYER_DRIVER" = "bcm2835-driver" ]; then
+    cp -P $(get_build_dir moonlight-embedded)/.$TARGET_NAME/libmoonlight-pi.so $ADDON_BUILD/$PKG_ADDON_ID/lib
+  elif [ "$KODIPLAYER_DRIVER" = "libamcodec" ]; then
+    cp -P $(get_build_dir moonlight-embedded)/.$TARGET_NAME/libmoonlight-aml.so $ADDON_BUILD/$PKG_ADDON_ID/lib
+  fi
+
+  cp $(get_build_dir libevdev)/.install_pkg/usr/lib/libevdev.so.2 $ADDON_BUILD/$PKG_ADDON_ID/lib
+
+  mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/etc
+  cp -P $(get_build_dir moonlight-embedded)/moonlight.conf $ADDON_BUILD/$PKG_ADDON_ID/etc
+  cp -P $(get_build_dir moonlight-embedded)/gamecontrollerdb.txt $ADDON_BUILD/$PKG_ADDON_ID/etc
 }
